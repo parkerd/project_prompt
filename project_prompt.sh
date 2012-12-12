@@ -1,15 +1,20 @@
+#!/usr/bin/env bash
+
 # disable python virtualenv prompt
 VIRTUAL_ENV_DISABLE_PROMPT=1
 
-# alias
-alias workon='__pp_work'
-
-# autocomplete
-if [ -d $PROJECT_PROMPT_DIR ]; then
-  complete -W "$(ls -1 $PROJECT_DIR)" workon
-fi
-
 # functions
+__pp_complete() {
+  #ls -1 $PROJECTS
+  project_list="$(ls -1 $PROJECTS)"
+  for ((i=0; i < ${#SUBPROJECTS[*]}; i++)); do
+    for sub in $(ls -1 $PROJECTS/${SUBPROJECTS[i]}); do
+      project_list="$project_list\n${SUBPROJECTS[i]}/$sub"
+    done
+  done
+  echo -e "$project_list"
+}
+
 __pp_pwd() {
   pwd | sed "s/$(echo $__pp_dir | sed 's/\//\\\//g')//"
 }
@@ -17,7 +22,11 @@ __pp_pwd() {
 __pp_work() {
   # return a list of __pp_dirs if one is not provided
   if [ $# -ne 1 ]; then
-    ls -1 $PROJECT_DIR
+    project_list="$PROJECTS"
+    for ((i=0; i < ${#SUBPROJECTS[*]}; i++)); do
+      project_list="$project_list $PROJECTS/${SUBPROJECTS[i]}"
+    done
+    ls $project_list
     return
   fi
 
@@ -26,7 +35,7 @@ __pp_work() {
   fi
 
   __pp_name=$1
-  __pp_dir=$PROJECT_DIR/$__pp_name
+  __pp_dir=$PROJECTS/$__pp_name
 
   if [ ! -d $__pp_dir ]; then
     read -p "Create new project '$__pp_name'? "
@@ -55,7 +64,7 @@ __pp_work() {
 }
 
 __pp_branch() {
-  status=$(cd $project_dir && git status)
+  status=$(cd $__pp_dir && git status)
   branch=$(echo "$status" | head -1 | cut -d' ' -f4-)
   if [ $(echo "$status" | egrep -c "Untracked|Change") -gt 0 ]; then
     echo "${branch}*"
@@ -79,3 +88,12 @@ __pp_quit() {
   cd
   export PS1=$_PS1
 }
+
+# alias
+alias workon='__pp_work'
+
+# autocomplete
+if [ -d $PROJECTS ]; then
+  complete -W "$(__pp_complete)" workon
+fi
+
