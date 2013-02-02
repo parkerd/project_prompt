@@ -96,4 +96,3 @@ alias workon='__pp_work'
 if [ -d $PROJECTS ]; then
   complete -W "$(__pp_complete)" workon
 fi
-
