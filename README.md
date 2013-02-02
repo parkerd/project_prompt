@@ -44,23 +44,23 @@ If the project uses git, the current branch is shown in the prompt.  Uncommited 
 
 Else a square prompt is used:
 ```bash
-[sub1/project1] $
+[sub1/project1] $ 
 ```
 
 When you change directories within a project the prompt contains the relative path:
 ```bash
-[sub1/example1] $ cd lib
-[sub1/example1]/lib $ 
+[sub1/example1] $ cd path/in/your/project
+[sub1/example1]/path/in/your/project $ 
 ```
 
 Returning to the root of your project is as simple as `cd`:
 ```bash
-[sub1/example1]/lib $ cd
+[sub1/example1]/path/in/your/project $ cd
 [sub1/example1] $ 
 ```
 
 To return home and restore your original prompt type `cdd`:
 ```bash
 [sub1/project1] $ cdd
-~ $
+~ $ 
 ```
