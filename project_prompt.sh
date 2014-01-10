@@ -65,7 +65,12 @@ __pp_work() {
 
 __pp_branch() {
   status=$(cd $__pp_dir && git status)
+
   branch=$(echo "$status" | head -1 | cut -d' ' -f4-)
+  if [ "$branch" == "" ]; then
+    branch=$(echo "$status" | head -1 | cut -d' ' -f3-)
+  fi
+
   if [ $(echo "$status" | egrep -c "Untracked|Change") -gt 0 ]; then
     echo "${branch}*"
   else
