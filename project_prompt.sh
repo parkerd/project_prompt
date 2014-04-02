@@ -77,14 +77,16 @@ __pp_work() {
 
   cd $__pp_dir
 
-  if [ -d "./.git" ]; then
-    export PS1=$(echo "$PS1" | sed 's/\\w/($(__pp_branch)|$__pp_name)$(__pp_pwd)/g')
+  if [ -d ".git" ]; then
+    export PS1=$(echo "$PS1" | sed 's/\\w/($(__pp_git_branch)|$__pp_name)$(__pp_pwd)/g')
+  elif [ -d ".hg" ]; then
+    export PS1=$(echo "$PS1" | sed 's/\\w/($(__pp_hg_status)$__pp_name)$(__pp_pwd)/g')
   else
     export PS1=$(echo "$PS1" | sed 's/\\w/[$__pp_name]$(__pp_pwd)/g')
   fi
 }
 
-__pp_branch() {
+__pp_git_branch() {
   status=$(cd $__pp_dir && git status)
 
   branch=$(echo "$status" | head -1 | cut -d' ' -f4-)
@@ -96,6 +98,12 @@ __pp_branch() {
     echo "${branch}*"
   else
     echo $branch
+  fi
+}
+
+__pp_hg_status() {
+  if [ $(cd $_pp_dir && hg status | grep -c ^) -gt 0 ]; then
+    echo "*|"
   fi
 }
 
@@ -113,8 +121,10 @@ __pp_quit() {
 
   cd
   export PS1=$_PS1
-  export PATH=$_PATH
-  export GOPATH=$_GOPATH
+  if [ -n "$_PATH" ]; then
+    export PATH=$_PATH
+    export GOPATH=$_GOPATH
+  fi
 }
 
 # alias
