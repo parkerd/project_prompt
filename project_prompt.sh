@@ -19,6 +19,13 @@ __pp_pwd() {
   pwd | sed "s/$(echo $__pp_dir | sed 's/\//\\\//g')//"
 }
 
+__pp_goenv() {
+  export _GOPATH=$GOPATH
+  export GOPATH=$__pp_dir
+  export _PATH=$PATH
+  export PATH=$GOPATH/bin:$PATH
+}
+
 __pp_work() {
   # return a list of __pp_dirs if one is not provided
   if [ $# -ne 1 ]; then
@@ -37,9 +44,23 @@ __pp_work() {
   __pp_name=$1
   __pp_dir=$PROJECTS/$__pp_name
 
+  if [ "${__pp_name:0:3}" == "go/" ]; then
+    __pp_goenv
+    __pp_base=$__pp_dir
+    if [ -z $GITHUB ]; then
+      echo "Set \$GITHUB to ensure proper workspace setup."
+      __pp_dir=$__pp_dir/src
+    else
+      __pp_dir=$__pp_dir/src/$GITHUB/${__pp_name:3}
+    fi
+  fi
+
   if [ ! -d $__pp_dir ]; then
     read -p "Create new project '$__pp_name'? "
     if [ "$REPLY" == "y" ]; then
+      if [ "${__pp_name:0:3}" == "go/" ]; then
+        mkdir -p $__pp_base/{bin,pkg,src}
+      fi
       mkdir -p $__pp_dir && git init $__pp_dir >/dev/null
     else
       echo
@@ -48,7 +69,7 @@ __pp_work() {
   fi
 
   if [ -z "$_PS1" ]; then
-      export _PS1=$PS1
+    export _PS1=$PS1
   fi
 
   alias cd='__pp_cd'
@@ -92,6 +113,8 @@ __pp_quit() {
 
   cd
   export PS1=$_PS1
+  export PATH=$_PATH
+  export GOPATH=$_GOPATH
 }
 
 # alias
