@@ -41,8 +41,13 @@ __pp_work() {
     export PS1=$_PS1
   fi
 
-  __pp_name=$1
-  __pp_dir=$PROJECTS/$__pp_name
+  if [ "$1" == "." ]; then
+    __pp_name=$(basename $(pwd))
+    __pp_dir=$(pwd)
+  else
+    __pp_name=$1
+    __pp_dir=$PROJECTS/$__pp_name
+  fi
 
   if [ "${__pp_name:0:3}" == "go/" ]; then
     __pp_goenv
