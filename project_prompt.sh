@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-
 # disable python virtualenv prompt
 VIRTUAL_ENV_DISABLE_PROMPT=1
 
 # functions
 __pp_complete() {
-  #ls -1 $PROJECTS
   project_list="$(ls -1 $PROJECTS)"
-  for ((i=0; i < ${#SUBPROJECTS[*]}; i++)); do
-    for sub in $(ls -1 $PROJECTS/${SUBPROJECTS[i]}); do
-      project_list="$project_list\n${SUBPROJECTS[i]}/$sub"
-    done
+  for sub in ${SUBPROJECTS[*]}; do
+    subprojects=$(ls -1 $PROJECTS/$sub | sed "s/^/$sub\//")
+    project_list="$project_list\n$subprojects"
   done
   echo -e "$project_list"
 }
@@ -26,22 +23,33 @@ __pp_goenv() {
   export PATH=$GOPATH/bin:$PATH
 }
 
-__pp_work() {
-  # return a list of __pp_dirs if one is not provided
+__pp_help() {
+  project_base=$(basename $PROJECTS)
+  echo "$project_base:"
+  ls $PROJECTS
+  echo
+
+  for sub in ${SUBPROJECTS[*]}; do
+    echo "$project_base/$(basename $sub):"
+    ls $PROJECTS/$sub
+    echo
+  done
+}
+
+__pp_workon() {
+  # return help if no project given
   if [ $# -ne 1 ]; then
-    project_list="$PROJECTS"
-    for ((i=0; i < ${#SUBPROJECTS[*]}; i++)); do
-      project_list="$project_list $PROJECTS/${SUBPROJECTS[i]}"
-    done
-    ls $project_list
+    __pp_help
     return
   fi
 
+  # reset prompt if previously in project
   if [ -n "$_PS1" ]; then
     export PS1=$_PS1
   fi
 
-  if [ "$1" == "." ]; then
+  # accept local directory as project
+  if [[ "$1" == "." ]]; then
     __pp_name=$(basename $(pwd))
     __pp_dir=$(pwd)
   else
@@ -49,7 +57,8 @@ __pp_work() {
     __pp_dir=$PROJECTS/$__pp_name
   fi
 
-  if [ "${__pp_name:0:3}" == "go/" ]; then
+  # shorten prompt for go
+  if [[ "${__pp_name:0:3}" == "go/" ]]; then
     __pp_goenv
     __pp_base=$__pp_dir
     if [ -z $GITHUB ]; then
@@ -60,46 +69,62 @@ __pp_work() {
     fi
   fi
 
+  # create new projects
   if [ ! -d $__pp_dir ]; then
-    read -p "Create new project '$__pp_name'? "
-    if [ "$REPLY" == "y" ]; then
-      if [ "${__pp_name:0:3}" == "go/" ]; then
+    local create_prompt="Create new project '$__pp_name'? "
+    if [ -n "$BASH_VERSION" ]; then
+      read -n1 -p "$create_prompt"
+    elif [ -n "$ZSH_VERSION" ]; then
+      read -q "REPLY?$create_prompt"
+    fi
+    echo
+    if [[ "$REPLY" == "y" ]]; then
+      if [[ "${__pp_name:0:3}" == "go/" ]]; then
         mkdir -p $__pp_base/{bin,pkg,src}
       fi
       mkdir -p $__pp_dir && git init $__pp_dir >/dev/null
     else
-      echo
       return
     fi
   fi
 
+  # save prompt for exit
   if [ -z "$_PS1" ]; then
     export _PS1=$PS1
   fi
 
+  # strip pwd from prompt
+  local ps1_pwd
+  if [ -n "$BASH_VERSION" ]; then
+    ps1_pwd="\w"
+  elif [ -n "$ZSH_VERSION" ]; then
+    ps1_pwd="%~"
+  fi
+
+  # replace prompt
+  cd $__pp_dir
+  __pp_ps1_tail=$(echo "$PS1" | sed "s/\\$ps1_pwd//")
+  if [ -d ".git" ]; then
+    export PS1='($(__pp_git_branch)|$__pp_name)$(__pp_pwd)'"$__pp_ps1_tail"
+  elif [ -d ".hg" ]; then
+    export PS1='($(__pp_hg_status)$__pp_name)$(__pp_pwd)'"$__pp_ps1_tail"
+  else
+    export PS1='[$__pp_name]$(__pp_pwd)'"$__pp_ps1_tail"
+  fi
+
   alias cd='__pp_cd'
   alias cdd='__pp_quit'
-
-  cd $__pp_dir
-
-  if [ -d ".git" ]; then
-    export PS1=$(echo "$PS1" | sed 's/\\w/($(__pp_git_branch)|$__pp_name)$(__pp_pwd)/g')
-  elif [ -d ".hg" ]; then
-    export PS1=$(echo "$PS1" | sed 's/\\w/($(__pp_hg_status)$__pp_name)$(__pp_pwd)/g')
-  else
-    export PS1=$(echo "$PS1" | sed 's/\\w/[$__pp_name]$(__pp_pwd)/g')
-  fi
 }
 
 __pp_git_branch() {
-  status=$(cd $__pp_dir && git status)
+  git_status=$(cd $__pp_dir && git status)
 
-  branch=$(echo "$status" | head -1 | cut -d' ' -f4-)
-  if [ "$branch" == "" ]; then
-    branch=$(echo "$status" | head -1 | cut -d' ' -f3-)
+  branch=$(echo "$git_status" | head -1 | cut -d' ' -f4-)
+  if [[ "$branch" == "" ]]; then
+    branch=$(echo "$git_status" | head -1 | cut -d' ' -f3-)
   fi
 
-  if [ $(echo "$status" | egrep -c "Untracked|Change") -gt 0 ]; then
+  if [ $(echo "$git_status" | egrep -c "Untracked|Change") -gt 0 ]; then
     echo "${branch}*"
   else
     echo $branch
@@ -107,7 +132,7 @@ __pp_git_branch() {
 }
 
 __pp_hg_status() {
-  if [ $(cd $_pp_dir && hg status | grep -c ^) -gt 0 ]; then
+  if [ $(cd $__pp_dir && hg status | grep -c "^") -gt 0 ]; then
     echo "*|"
   fi
 }
@@ -133,9 +158,16 @@ __pp_quit() {
 }
 
 # alias
-alias workon='__pp_work'
+alias workon='__pp_workon'
 
 # autocomplete
 if [ -d $PROJECTS ]; then
-  complete -W "$(__pp_complete)" workon
+  if [ -n "$BASH_VERSION" ]; then
+    complete -W "$(__pp_complete)" workon
+  elif [ -n "$ZSH_VERSION" ]; then
+    __pp_zsh() {
+      reply=( $(__pp_complete) )
+    }
+    compctl -K __pp_zsh __pp_workon
+  fi
 fi
