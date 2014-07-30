@@ -143,7 +143,11 @@ __pp_cd() {
   if [ -z "$@" ]; then
     cd $__pp_dir
   else
-    cd "$@"
+    if [ -d "$@" ]; then
+      cd "$@"
+    else
+      echo "cd: no such file or directory: ${@}" 1>&2
+    fi
   fi
 }
 
