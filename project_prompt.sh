@@ -61,11 +61,13 @@ __pp_workon() {
   if [[ "${__pp_name:0:3}" == "go/" ]]; then
     __pp_goenv
     __pp_base=$__pp_dir
+    # TODO: add support for multiple src repos
     if [ -z $GITHUB ]; then
       echo "Set \$GITHUB to ensure proper workspace setup."
       __pp_dir=$__pp_dir/src
     else
       __pp_dir=$__pp_dir/src/$GITHUB/${__pp_name:3}
+      export GOPATH=$__pp_dir/_vendor:$GOPATH
     fi
   fi
 
