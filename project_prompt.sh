@@ -16,13 +16,6 @@ __pp_pwd() {
   pwd | sed "s/$(echo $__pp_dir | sed 's/\//\\\//g')//"
 }
 
-__pp_goenv() {
-  export _GOPATH=$GOPATH
-  export GOPATH=$__pp_dir
-  export _PATH=$PATH
-  export PATH=$GOPATH/bin:$PATH
-}
-
 __pp_help() {
   project_base=$(basename $PROJECTS)
   echo "$project_base:"
@@ -55,20 +48,7 @@ __pp_workon() {
   else
     __pp_name=$1
     __pp_dir=$PROJECTS/$__pp_name
-  fi
-
-  # shorten prompt for go
-  if [[ "${__pp_name:0:3}" == "go/" ]]; then
-    __pp_goenv
     __pp_base=$__pp_dir
-    # TODO: add support for multiple src repos
-    if [ -z $GITHUB ]; then
-      echo "Set \$GITHUB to ensure proper workspace setup."
-      __pp_dir=$__pp_dir/src
-    else
-      __pp_dir=$__pp_dir/src/$GITHUB/${__pp_name:3}
-      export GOPATH=$__pp_dir/_vendor:$GOPATH
-    fi
   fi
 
   # create new projects
@@ -80,14 +60,44 @@ __pp_workon() {
       read -q "REPLY?$create_prompt"
     fi
     echo
+
     if [[ "$REPLY" == "y" ]]; then
+      # special case for go
       if [[ "${__pp_name:0:3}" == "go/" ]]; then
         mkdir -p $__pp_base/{bin,pkg,src}
+
+        if [ -z $GOSRC ]; then
+          echo 'Set $GOSRC for default repo url.'
+        fi
+
+        local create_prompt="Repo url [$GOSRC]: "
+        if [ -n "$BASH_VERSION" ]; then
+          read -p "$create_prompt"
+        elif [ -n "$ZSH_VERSION" ]; then
+          read "REPLY?$create_prompt"
+        fi
+        echo
+
+        if [[ "$REPLY" == "" ]]; then
+          REPLY=$GOSRC
+        fi
+
+        __pp_dir=$__pp_dir/src/$REPLY/${__pp_name:3}
       fi
+
       mkdir -p $__pp_dir && git init $__pp_dir >/dev/null
     else
       return
     fi
+  fi
+
+  # special case for go
+  if [[ "${__pp_name:0:3}" == "go/" ]]; then
+    __pp_dir=$(echo $__pp_base/src/**/${__pp_name:3})
+    export _GOPATH=$GOPATH
+    export GOPATH=$__pp_dir/_vendor:$GOPATH
+    export _PATH=$PATH
+    export PATH=$__pp_base/bin:$PATH
   fi
 
   # save prompt for exit
@@ -103,8 +113,10 @@ __pp_workon() {
     ps1_pwd="%~"
   fi
 
-  # replace prompt
+  # change directory
   cd $__pp_dir
+
+  # replace prompt
   __pp_ps1_tail=$(echo "$PS1" | sed "s/\\$ps1_pwd//")
   if [ -d ".git" ]; then
     export PS1='($(__pp_git_branch)|$__pp_name)$(__pp_pwd)'"$__pp_ps1_tail"
