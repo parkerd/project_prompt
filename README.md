@@ -36,13 +36,13 @@ To enter a project:
 (master|project_prompt) $ 
 ```
 
-If the project uses git, the current branch is shown in the prompt.  Uncommited changes are indicated by an asterisk:
+When using git and hg, uncommited changes are indicated by an asterisk. If the project uses git, the current branch is also shown in the prompt:
 ```bash
 (master|project_prompt) $ touch file
 (master*|project_prompt) $ 
 ```
 
-Else a square prompt is used:
+When not using git or hg, a square prompt is used:
 ```bash
 [sub1/project1] $ 
 ```
