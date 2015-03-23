@@ -166,6 +166,9 @@ __pp_cd() {
 __pp_quit() {
   unalias cd
   unalias cdd
+  unset __pp_name
+  unset __pp_dir
+  unset __pp_base
 
   cd
   export PS1=$_PS1
