@@ -6,6 +6,9 @@ VIRTUAL_ENV_DISABLE_PROMPT=1
 __pp_complete() {
   project_list="$(ls -1 $PROJECTS)"
   for sub in ${SUBPROJECTS[*]}; do
+    if [ ! -d $PROJECTS/$sub ]; then
+      mkdir -p $PROJECTS/$sub
+    fi
     subprojects=$(ls -1 $PROJECTS/$sub | sed "s/^/$sub\//")
     project_list="$project_list\n$subprojects"
   done
