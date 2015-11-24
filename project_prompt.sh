@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # disable python virtualenv prompt
-VIRTUAL_ENV_DISABLE_PROMPT=1
+export VIRTUAL_ENV_DISABLE_PROMPT=1
 
 # functions
 __pp_complete() {
-  project_list="$(ls -1 $PROJECTS)"
+  project_list="$(ls -1 "$PROJECTS")"
   for sub in ${SUBPROJECTS[*]}; do
     if [ ! -d $PROJECTS/$sub ]; then
       mkdir -p $PROJECTS/$sub
@@ -17,6 +17,15 @@ __pp_complete() {
 
 __pp_pwd() {
   pwd | sed "s/$(echo $__pp_dir | sed 's/\//\\\//g')//"
+}
+
+__pp_pwd_clean() {
+  ppwd=$(__pp_pwd &>/dev/null; echo $?)
+  if [ $ppwd -eq 0 ]; then
+    echo $(__pp_pwd | sed 's/^\///')
+  else
+    __pp_pwd 2>/dev/null
+  fi
 }
 
 __pp_help() {
@@ -44,6 +53,9 @@ __pp_workon() {
     export PS1=$_PS1
   fi
 
+  __pp_backup_name=$__pp_name
+  __pp_backup_dir=$__pp_dir
+  __pp_backup_base=$_pp_base
   # accept local directory as project
   if [[ "$1" == "." ]]; then
     __pp_name=$(basename $(pwd))
@@ -90,6 +102,9 @@ __pp_workon() {
 
       mkdir -p $__pp_dir && git init $__pp_dir >/dev/null
     else
+      __pp_name=$__pp_backup_name
+      __pp_dir=$__pp_backup_dir
+      __pp_base=$__pp_backup_base
       return
     fi
   fi
@@ -134,16 +149,21 @@ __pp_workon() {
 }
 
 __pp_git_branch() {
-  git_status=$(cd $__pp_dir && git status)
+  git_status=$(cd $__pp_dir && git status 2>/dev/null)
+  if [ $? -eq 0 ]; then
+    branch=$(echo "$git_status" | head -1 | cut -d' ' -f4-)
+    if [[ "$branch" == "" ]]; then
+      branch=$(echo "$git_status" | head -1 | cut -d' ' -f3-)
+    fi
 
-  branch=$(echo "$git_status" | head -1 | cut -d' ' -f4-)
-  if [[ "$branch" == "" ]]; then
-    branch=$(echo "$git_status" | head -1 | cut -d' ' -f3-)
-  fi
+    #if [[ "$branch" != "master" ]]; then
+      branch=" ${branch}"
+    #fi
 
-  if [ $(echo "$git_status" | egrep -c "Untracked|Change") -gt 0 ]; then
-    echo "${branch}*"
-  else
+    if [ $(echo "$git_status" | egrep -c "Untracked|Change") -gt 0 ]; then
+      branch="${branch} ±"
+    fi
+
     echo $branch
   fi
 }
