@@ -63,6 +63,10 @@ __pp_workon() {
   else
     __pp_name=$1
     __pp_dir=$PROJECTS/$__pp_name
+    # resolve symlinks
+    if [[ -L $__pp_dir ]]; then
+      __pp_dir=$(readlink -f $__pp_dir)
+    fi
     __pp_base=$__pp_dir
   fi
 
@@ -77,29 +81,6 @@ __pp_workon() {
     echo
 
     if [[ "$REPLY" == "y" ]]; then
-      # special case for go
-      if [[ "${__pp_name:0:3}" == "go/" ]]; then
-        mkdir -p $__pp_base/{bin,pkg,src}
-
-        if [ -z $GOSRC ]; then
-          echo 'Set $GOSRC for default repo url.'
-        fi
-
-        local create_prompt="Repo url [$GOSRC]: "
-        if [ -n "$BASH_VERSION" ]; then
-          read -p "$create_prompt"
-        elif [ -n "$ZSH_VERSION" ]; then
-          read "REPLY?$create_prompt"
-        fi
-        echo
-
-        if [[ "$REPLY" == "" ]]; then
-          REPLY=$GOSRC
-        fi
-
-        __pp_dir=$__pp_dir/src/$REPLY/${__pp_name:3}
-      fi
-
       mkdir -p $__pp_dir && git init $__pp_dir >/dev/null
     else
       __pp_name=$__pp_backup_name
@@ -107,15 +88,6 @@ __pp_workon() {
       __pp_base=$__pp_backup_base
       return
     fi
-  fi
-
-  # special case for go
-  if [[ "${__pp_name:0:3}" == "go/" ]]; then
-    __pp_dir=$(echo $__pp_base/src/**/${__pp_name:3})
-    export _GOPATH=$GOPATH
-    export GOPATH=$__pp_dir/_vendor:$GOPATH
-    export _PATH=$PATH
-    export PATH=$__pp_base/bin:$PATH
   fi
 
   # save prompt for exit
@@ -149,7 +121,13 @@ __pp_workon() {
 }
 
 __pp_git_branch() {
-  git_status=$(cd $__pp_dir && git status 2>/dev/null)
+  # Support subrepos
+  if [[ -d ".git" ]]; then
+    git_status=$(git status 2>/dev/null)
+  else
+    git_status=$(cd $__pp_dir && git status 2>/dev/null)
+  fi
+
   if [ $? -eq 0 ]; then
     branch=$(echo "$git_status" | head -1 | cut -d' ' -f4-)
     if [[ "$branch" == "" ]]; then
@@ -197,7 +175,6 @@ __pp_quit() {
   export PS1=$_PS1
   if [ -n "$_PATH" ]; then
     export PATH=$_PATH
-    export GOPATH=$_GOPATH
   fi
 }
 
