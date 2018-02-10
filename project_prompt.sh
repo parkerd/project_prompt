@@ -77,7 +77,11 @@ __pp_workon() {
     local name=$__pp_name && unset __pp_name
 
     local create_prompt="Create new project '$name'? "
-    read -q "REPLY?$create_prompt"
+    if [[ -n "$BASH_VERSION" ]]; then
+      read -n1 -p "$create_prompt"
+    elif [[ -n "$ZSH_VERSION" ]]; then
+      read -q "REPLY?$create_prompt"
+    fi
     echo
 
     if [[ "$REPLY" != "y" ]]; then
