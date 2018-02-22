@@ -90,7 +90,7 @@ __pp_workon() {
 
     __pp_dir=$dir
     __pp_name=$name
-    mkdir -p $__pp_dir && git init $__pp_dir > /dev/null
+    mkdir -p $__pp_dir && git init $__pp_dir >/dev/null
   fi
 
   if [[ -n "$_PS1" ]]; then
@@ -131,9 +131,9 @@ __pp_git_branch() {
   if [[ -z "$__pp_dir" ]]; then
     return
   elif [[ -d ".git" ]]; then
-    git_status=$(git status 2> /dev/null)
+    git_status=$(git status 2>/dev/null)
   else
-    git_status=$(cd $__pp_dir && git status 2> /dev/null)
+    git_status=$(cd $__pp_dir && git status 2>/dev/null)
   fi
 
   if [[ $? -eq 0 ]]; then
@@ -171,8 +171,8 @@ __pp_cd() {
 }
 
 __pp_quit() {
-  alias cd &> /dev/null && unalias cd
-  alias cdd &> /dev/null && unalias cdd
+  alias cd &>/dev/null && unalias cd
+  alias cdd &>/dev/null && unalias cdd
   unset __pp_name
   unset __pp_dir
   unset __pp_base
@@ -193,7 +193,7 @@ if [[ -d $PROJECTS ]]; then
     complete -W "$(__pp_complete)" workon
   elif [[ -n "$ZSH_VERSION" ]]; then
     __pp_zsh() {
-      reply=( $(__pp_complete) )
+      reply=($(__pp_complete))
     }
     compctl -K __pp_zsh __pp_workon
   fi
