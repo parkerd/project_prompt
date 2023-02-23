@@ -112,6 +112,15 @@ __pp_workon() {
   # change directory
   cd $__pp_dir
 
+  # set aliases
+  alias cd='__pp_cd'
+  alias cdd='__pp_quit'
+
+  # Disable changing prompt if using starship
+  if [[ "$PS1" == *starship* ]]; then
+    return
+  fi
+
   # replace prompt
   __pp_ps1_tail=$(echo "$PS1" | sed "s/\\$ps1_pwd//")
   if [[ -d ".git" ]]; then
@@ -121,19 +130,14 @@ __pp_workon() {
   else
     export PS1='[$__pp_name]$(__pp_pwd)'"$__pp_ps1_tail"
   fi
-
-  alias cd='__pp_cd'
-  alias cdd='__pp_quit'
 }
 
 __pp_git_branch() {
   # Support subrepos
   if [[ -z "$__pp_dir" ]]; then
     return
-  elif [[ -d ".git" ]]; then
-    git_status=$(git status 2>/dev/null)
   else
-    git_status=$(cd $__pp_dir && git status 2>/dev/null)
+    git_status=$(git status 2>/dev/null)
   fi
 
   if [[ $? -eq 0 ]]; then
