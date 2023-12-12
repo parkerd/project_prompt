@@ -197,8 +197,7 @@ if [[ -d $PROJECTS ]]; then
     complete -W "$(__pp_complete)" workon
   elif [[ -n "$ZSH_VERSION" ]]; then
     __pp_zsh() {
-      reply=($(__pp_complete))
+      compadd $(__pp_complete)
     }
-    compctl -K __pp_zsh __pp_workon
   fi
 fi
